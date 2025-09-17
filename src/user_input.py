@@ -205,7 +205,9 @@ class UserProfileProcessor:
         # Education level
         level = profile.get('education_level', '')
         if level:
-            summary_parts.append(f"Education Level: {level.title()}")
+            formatted_level = self._format_education_level(level)
+            summary_parts.append(f"Education Level: {formatted_level}")
+            print(f"DEBUG: Profile summary - raw level: '{level}' -> formatted: '{formatted_level}'")
         
         # Interests 
         interests = profile.get('interests', [])
@@ -227,8 +229,36 @@ class UserProfileProcessor:
         
         return "\n".join(summary_parts) if summary_parts else "Profile information not provided"
     
+    def _format_education_level(self, education_level: str) -> str:
+        """Format education level for proper display."""
+        print(f"DEBUG: UserInputProcessor._format_education_level called with: '{education_level}'")
+        
+        if not education_level or education_level == 'Not specified':
+            return 'Not specified'
+        
+        # Mapping for proper display format
+        level_mappings = {
+            '1st year': '1st Year (Freshman)',
+            '2nd year': '2nd Year (Sophomore)', 
+            '3rd year': '3rd Year (Junior)',
+            '4th year': '4th Year (Senior)',
+            'graduate': 'Graduate Student'
+        }
+        
+        lower_level = education_level.lower()
+        print(f"DEBUG: Lowercased: '{lower_level}', mappings available: {list(level_mappings.keys())}")
+        
+        if lower_level in level_mappings:
+            result = level_mappings[lower_level]
+            print(f"DEBUG: Found mapping: '{lower_level}' -> '{result}'")
+            return result
+        else:
+            # If no mapping found, return original without .title() to avoid "2Nd Year" issue
+            print(f"DEBUG: No mapping found, returning original: '{education_level}'")
+            return education_level
+
     def suggest_missing_info(self, profile: Dict[str, Any]) -> List[str]:
-        """Suggest what information might help improve recommendations."""
+        """Suggest what information might be helpful to add."""
         suggestions = []
         
         if not profile.get('education_level'):
