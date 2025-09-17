@@ -58,8 +58,12 @@ jobs:
         # Verify authentication
         heroku auth:whoami
         
-        # Add Heroku remote
-        heroku git:remote -a $HEROKU_APP_NAME
+        # Configure git to use token for authentication
+        git config --global credential.helper store
+        echo "https://heroku:$HEROKU_API_KEY@git.heroku.com" > ~/.git-credentials
+        
+        # Add Heroku remote with token in URL
+        git remote add heroku https://heroku:$HEROKU_API_KEY@git.heroku.com/$HEROKU_APP_NAME.git || git remote set-url heroku https://heroku:$HEROKU_API_KEY@git.heroku.com/$HEROKU_APP_NAME.git
         
         # Verify remote was added
         git remote -v
