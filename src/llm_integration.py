@@ -42,6 +42,10 @@ class AICourseAdvisor:
             
             Always be helpful, informative, and maintain a friendly, professional tone.
             Focus on how courses connect to the student's interests and career aspirations.
+            
+            IMPORTANT: When displaying the student's profile summary, preserve the exact formatting 
+            and capitalization provided, especially for education levels (e.g., "1st Year (Freshman)", 
+            "2nd Year (Sophomore)"). Do not change the capitalization or format of these terms.
             """
             
         except Exception as e:
@@ -110,6 +114,10 @@ class AICourseAdvisor:
         career_goal = user_profile.get('career_goal', 'Not specified')
         additional_info = user_profile.get('additional_info', '')
         
+        # Debug logging
+        print(f"DEBUG: Original education_level: '{education_level}'")
+        print(f"DEBUG: Formatted education_level: '{formatted_education_level}'")
+        
         interests_str = ', '.join(interests) if interests else 'Not specified'
         
         prompt = f"""
@@ -120,6 +128,10 @@ class AICourseAdvisor:
         - Interests: {interests_str}
         - Career Goal: {career_goal}
         - Additional Information: {additional_info}
+        
+        CRITICAL FORMATTING INSTRUCTION: When you create the "📝 Your Profile Summary" section, 
+        you MUST use the EXACT text "{formatted_education_level}" for the Education Level field. 
+        DO NOT change the capitalization, spacing, or format in any way.
         
         AVAILABLE COURSES:
         {course_context}
