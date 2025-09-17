@@ -85,10 +85,27 @@ class AICourseAdvisor:
             print(f"Error generating recommendations: {e}")
             return "I encountered an error while generating your course recommendations. Please try again."
     
+    def _format_education_level(self, education_level: str) -> str:
+        """Format education level for proper display."""
+        if not education_level or education_level == 'Not specified':
+            return 'Not specified'
+        
+        # Mapping for proper display format
+        level_mappings = {
+            '1st year': '1st Year (Freshman)',
+            '2nd year': '2nd Year (Sophomore)', 
+            '3rd year': '3rd Year (Junior)',
+            '4th year': '4th Year (Senior)',
+            'graduate': 'Graduate Student'
+        }
+        
+        return level_mappings.get(education_level.lower(), education_level.title())
+    
     def _create_recommendation_prompt(self, user_profile: Dict[str, Any], course_context: str) -> str:
         """Create a detailed prompt for course recommendations."""
         
         education_level = user_profile.get('education_level', 'Not specified')
+        formatted_education_level = self._format_education_level(education_level)
         interests = user_profile.get('interests', [])
         career_goal = user_profile.get('career_goal', 'Not specified')
         additional_info = user_profile.get('additional_info', '')
@@ -99,7 +116,7 @@ class AICourseAdvisor:
         {self.system_context}
         
         STUDENT PROFILE:
-        - Education Level: {education_level}
+        - Education Level: {formatted_education_level}
         - Interests: {interests_str}
         - Career Goal: {career_goal}
         - Additional Information: {additional_info}
