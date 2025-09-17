@@ -1,0 +1,50 @@
+name: Deploy to Heroku
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        
+    - name: Run basic tests
+      run: |
+        # Add basic syntax check
+        python -m py_compile app.py
+        python -m py_compile src/llm_integration.py
+        python -m py_compile src/rag_system.py
+        python -m py_compile src/user_input.py
+        
+    - name: Deploy to Heroku
+      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      uses: akhileshns/heroku-deploy@v3.12.14
+      with:
+        heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
+        heroku_app_name: ${{ secrets.HEROKU_APP_NAME }}
+        heroku_email: ${{ secrets.HEROKU_EMAIL }}
+        usedocker: false
+        
+    - name: Post-deployment health check
+      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      run: |
+        sleep 10
+        curl -f https://${{ secrets.HEROKU_APP_NAME }}.herokuapp.com/ || exit 1
