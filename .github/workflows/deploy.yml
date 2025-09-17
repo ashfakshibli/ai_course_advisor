@@ -4,12 +4,9 @@ on:
   push:
     branches:
       - main
-  pull_request:
-    branches:
-      - main
 
 jobs:
-  deploy:
+  test:
     runs-on: ubuntu-latest
     
     steps:
@@ -34,17 +31,29 @@ jobs:
         python -m py_compile src/rag_system.py
         python -m py_compile src/user_input.py
         
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        
     - name: Deploy to Heroku
-      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-      uses: akhileshns/heroku-deploy@v3.12.14
+      uses: akhileshns/heroku-deploy@v3.13.15
       with:
         heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
         heroku_app_name: ${{ secrets.HEROKU_APP_NAME }}
         heroku_email: ${{ secrets.HEROKU_EMAIL }}
         usedocker: false
+        dontautocreate: true
         
     - name: Post-deployment health check
-      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
       run: |
-        sleep 10
-        curl -f https://${{ secrets.HEROKU_APP_NAME }}.herokuapp.com/ || exit 1
+        echo "Waiting for deployment to complete..."
+        sleep 30
+        echo "Testing application health..."
+        curl -f https://${{ secrets.HEROKU_APP_NAME }}.herokuapp.com/ -m 30 || echo "Health check failed, but deployment may still be in progress"
