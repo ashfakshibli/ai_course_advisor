@@ -52,7 +52,19 @@ jobs:
         HEROKU_APP_NAME: ${{ secrets.HEROKU_APP_NAME }}
         HEROKU_EMAIL: ${{ secrets.HEROKU_EMAIL }}
       run: |
+        # Login to Heroku
+        echo $HEROKU_API_KEY | heroku auth:token
+        
+        # Verify authentication
+        heroku auth:whoami
+        
+        # Add Heroku remote
         heroku git:remote -a $HEROKU_APP_NAME
+        
+        # Verify remote was added
+        git remote -v
+        
+        # Deploy to Heroku
         git push heroku main
         
     - name: Post-deployment health check
