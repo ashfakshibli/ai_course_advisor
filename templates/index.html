@@ -1,0 +1,1111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>AI Student Course Advisor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 50%, #3b82f6 100%);
+            min-height: 100vh;
+        }
+        
+        .main-content-area {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+        }        .message-bubble {
+            padding: 0.75rem;
+            border-radius: 1rem;
+            max-width: 85%;
+            margin-bottom: 0.5rem;
+            word-wrap: break-word;
+            font-size: 0.875rem;
+        }
+        
+        .user-message {
+            background-color: #3b82f6;
+            color: white;
+            align-self: flex-end;
+            margin-left: auto;
+        }
+        
+        .advisor-message {
+            background-color: white;
+            color: #374151;
+            align-self: flex-start;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .compact-form {
+            padding: 0.5rem;
+        }
+        
+        .recommendation-card {
+            background: white;
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            border-left: 4px solid #3b82f6;
+        }
+        
+        .typing-indicator {
+            display: none;
+            align-items: center;
+            padding: 1rem;
+            color: #6b7280;
+        }
+        
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            margin: 0 2px;
+            background-color: #6b7280;
+            border-radius: 50%;
+            animation: typing 1.4s infinite ease-in-out;
+        }
+        
+        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+        
+        @keyframes typing {
+            0%, 80%, 100% { transform: scale(0.8); opacity: 0.5; }
+            40% { transform: scale(1); opacity: 1; }
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6, #1e40af);
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(59, 130, 246, 0.4);
+        }
+        
+        .section-header {
+            background: rgba(255,255,255,0.2);
+            border-left: 4px solid #1e40af;
+        }
+
+        .interest-compact {
+            margin-bottom: 0.75rem;
+        }
+
+        .interest-compact h4 {
+            font-weight: 500;
+            margin-bottom: 0.25rem;
+            font-size: 0.875rem;
+        }
+
+        .interest-grid-compact {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.25rem;
+            font-size: 0.75rem;
+        }
+
+        .course-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            border-left: 4px solid #3b82f6;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .course-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .progress-step {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            background: white;
+            opacity: 0.6;
+            transition: opacity 0.3s;
+        }
+
+        .progress-step.active {
+            opacity: 1;
+            background: #dbeafe;
+        }
+
+        .progress-step.completed {
+            opacity: 1;
+            background: #dcfce7;
+        }
+
+        .step-icon {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 0.75rem;
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+
+        .step-waiting { background: #e5e7eb; color: #6b7280; }
+        .step-active { background: #3b82f6; color: white; }
+        .step-completed { background: #10b981; color: white; }
+        
+        /* Chat bubble animations */
+        #chat-window {
+            animation: slideUp 0.3s ease-out;
+        }
+        
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .chat-notification {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background: #ef4444;
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <!-- Debug Sidebar -->
+    <div id="debugSidebar" class="hidden fixed left-0 top-0 w-80 h-full bg-gray-900 text-gray-100 overflow-hidden flex flex-col shadow-2xl z-50">
+        <div class="p-4 bg-gray-800 border-b border-gray-700">
+            <div class="flex items-center justify-between">
+                <h3 class="text-sm font-semibold text-blue-300">🔧 System Debug Log</h3>
+                <button id="closeSidebar" class="text-gray-400 hover:text-white text-lg">&times;</button>
+            </div>
+            <p class="text-xs text-gray-400 mt-1">Real-time system operations</p>
+        </div>
+        <div id="debugLog" class="flex-1 p-4 overflow-y-auto text-xs space-y-2 font-mono">
+            <div class="text-gray-400">🚀 System initialized. Waiting for user interaction...</div>
+        </div>
+        <div class="p-3 bg-gray-800 border-t border-gray-700">
+            <button id="clearDebugLog" class="text-xs text-gray-400 hover:text-white">Clear Log</button>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header class="bg-transparent shadow-none py-4">
+        <div class="text-center">
+            <h1 class="text-2xl font-bold text-white mb-1">
+                🎓 AI Student Course Advisor
+            </h1>
+            <p class="text-white text-sm">
+                Get personalized course recommendations powered by AI
+            </p>
+        </div>
+    </header>
+    
+    <!-- Debug Button -->
+    <div class="text-center mb-4">
+        <button id="toggleDebug" class="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-lg transition-colors shadow-lg">
+            🔧 Show Debug
+        </button>
+    </div>
+    
+    <!-- Main Split Layout -->
+    <div class="flex gap-4 px-4 pb-4" style="height: calc(100vh - 160px);">
+        <!-- Left Panel - User Input -->
+        <div class="w-1/2 bg-white rounded-lg shadow-lg overflow-y-auto">
+            <div class="p-4">
+                <h2 class="text-lg font-semibold text-gray-800 mb-3 flex items-center">
+                    🎯 Your Preferences
+                </h2>
+                <form id="profile-form">
+                    <!-- Education Level -->
+                    <div class="mb-4">
+                        <label class="text-sm font-medium text-gray-700 mb-2 block">
+                            🎓 Academic Level Next Semester *
+                        </label>
+                        <select id="education-level" class="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
+                            <option value="">Select your level...</option>
+                            <option value="1st year">1st Year (Freshman)</option>
+                            <option value="2nd year">2nd Year (Sophomore)</option>
+                            <option value="3rd year">3rd Year (Junior)</option>
+                            <option value="4th year">4th Year (Senior)</option>
+                            <option value="graduate">Graduate Student</option>
+                        </select>
+                        </p>
+                    </div>
+
+                    <!-- Interests Section -->
+                    <div class="mb-4">
+                        <label class="text-sm font-medium text-gray-700 mb-2 block">
+                            ❤️ Interests
+                        </label>
+                        
+                        <!-- Tech & Computing -->
+                        <div class="mb-3">
+                            <h4 class="text-blue-600 font-medium text-sm mb-1">Tech & Computing</h4>
+                            <div class="grid grid-cols-2 gap-1 text-xs">
+                                <label class="flex items-center">
+                                    <input type="checkbox" name="interests" value="AI/ML" class="mr-1">
+                                    AI/ML
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="checkbox" name="interests" value="Web Dev" class="mr-1">
+                                    Web Dev
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="checkbox" name="interests" value="Security" class="mr-1">
+                                    Security
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="checkbox" name="interests" value="Data Science" class="mr-1">
+                                    Data Science
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="checkbox" name="interests" value="Mobile Dev" class="mr-1">
+                                    Mobile Dev
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="checkbox" name="interests" value="Game Dev" class="mr-1">
+                                    Game Dev
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Business & Management -->
+                        <div class="mb-3">
+                            <h4 class="text-yellow-600 font-medium text-sm mb-1">Business & Management</h4>
+                            <div class="grid grid-cols-2 gap-1 text-xs">
+                                <label class="flex items-center">
+                                    <input type="checkbox" name="interests" value="Entrepreneurship" class="mr-1">
+                                    Entrepreneurship
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="checkbox" name="interests" value="Management" class="mr-1">
+                                    Management
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="checkbox" name="interests" value="Business Strategy" class="mr-1">
+                                    Business Strategy
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="checkbox" name="interests" value="Finance/Accounting" class="mr-1">
+                                    Finance/Accounting
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Science & Research -->
+                        <div class="mb-3">
+                            <h4 class="text-cyan-600 font-medium text-sm mb-1">Science & Research</h4>
+                            <div class="grid grid-cols-2 gap-1 text-xs">
+                                <label class="flex items-center">
+                                    <input type="checkbox" name="interests" value="Biology/Biotech" class="mr-1">
+                                    Biology/Biotech
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="checkbox" name="interests" value="Chemistry" class="mr-1">
+                                    Chemistry
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="checkbox" name="interests" value="Mathematics" class="mr-1">
+                                    Mathematics
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="checkbox" name="interests" value="Physics" class="mr-1">
+                                    Physics
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Communication & Society -->
+                        <div class="mb-3">
+                            <h4 class="text-purple-600 font-medium text-sm mb-1">Communication & Society</h4>
+                            <div class="grid grid-cols-2 gap-1 text-xs">
+                                <label class="flex items-center">
+                                    <input type="checkbox" name="interests" value="Communication" class="mr-1">
+                                    Communication
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="checkbox" name="interests" value="Science, Tech & Society" class="mr-1">
+                                    Science, Tech & Society
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="checkbox" name="interests" value="Psychology" class="mr-1">
+                                    Psychology
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="checkbox" name="interests" value="Education" class="mr-1">
+                                    Education
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Design & Creative -->
+                        <div class="mb-3">
+                            <h4 class="text-red-600 font-medium text-sm mb-1">Design & Creative</h4>
+                            <div class="grid grid-cols-2 gap-1 text-xs">
+                                <label class="flex items-center">
+                                    <input type="checkbox" name="interests" value="UI/UX Design" class="mr-1">
+                                    UI/UX Design
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="checkbox" name="interests" value="Architecture" class="mr-1">
+                                    Architecture
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="checkbox" name="interests" value="Theatre Arts" class="mr-1">
+                                    Theatre Arts
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="checkbox" name="interests" value="History/Humanities" class="mr-1">
+                                    History/Humanities
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Health & Wellness -->
+                        <div class="mb-3">
+                            <h4 class="text-green-600 font-medium text-sm mb-1">Health & Wellness</h4>
+                            <div class="grid grid-cols-2 gap-1 text-xs">
+                                <label class="flex items-center">
+                                    <input type="checkbox" name="interests" value="Health & Wellness" class="mr-1">
+                                    Health & Wellness
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="checkbox" name="interests" value="Nursing" class="mr-1">
+                                    Nursing
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Explore New Fields -->
+                        <div class="bg-blue-50 p-2 rounded-lg mt-3">
+                            <label class="flex items-center text-xs">
+                                <input type="checkbox" id="explore-new" class="mr-1">
+                                <span class="text-blue-700">✨ Explore new fields & discover something different!</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Career Goals -->
+                    <div class="mb-4">
+                        <label class="text-sm font-medium text-gray-700 mb-2 block">
+                            💼 Career Goals (Optional)
+                        </label>
+                        <select id="career-goal" class="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
+                            <option value="">Select career path you're considering...</option>
+                            <option value="software engineer">Software Engineer</option>
+                            <option value="data scientist">Data Scientist</option>
+                            <option value="cybersecurity analyst">Cybersecurity Analyst</option>
+                            <option value="product manager">Product Manager</option>
+                            <option value="research scientist">Research Scientist</option>
+                            <option value="healthcare professional">Healthcare Professional</option>
+                            <option value="nurse">Nurse</option>
+                            <option value="doctor">Doctor</option>
+                            <option value="teacher">Teacher</option>
+                            <option value="business analyst">Business Analyst</option>
+                            <option value="entrepreneur">Entrepreneur</option>
+                            <option value="marketing specialist">Marketing Specialist</option>
+                            <option value="financial analyst">Financial Analyst</option>
+                            <option value="graphic designer">Graphic Designer</option>
+                            <option value="musician">Musician</option>
+                            <option value="other">Other/Undecided</option>
+                        </select>
+                        <p class="text-sm text-gray-500 mt-1">
+                            What career path are you considering? This helps us recommend more relevant courses.
+                        </p>
+                    </div>
+
+                    <!-- Number of Recommendations -->
+                    <div class="mb-4">
+                        <label class="text-sm font-medium text-gray-700 mb-2 block">
+                            📊 Number of Recommendations
+                        </label>
+                        <div class="grid grid-cols-4 gap-2">
+                            <label class="flex items-center justify-center p-2 border border-gray-300 rounded-md cursor-pointer hover:bg-blue-50 text-xs">
+                                <input type="radio" name="course-count" value="3" class="mr-1">
+                                3 courses
+                            </label>
+                            <label class="flex items-center justify-center p-2 border border-gray-300 rounded-md cursor-pointer hover:bg-blue-50 text-xs">
+                                <input type="radio" name="course-count" value="4" class="mr-1">
+                                4 courses
+                            </label>
+                            <label class="flex items-center justify-center p-2 border border-gray-300 rounded-md cursor-pointer hover:bg-blue-50 text-xs">
+                                <input type="radio" name="course-count" value="5" class="mr-1">
+                                5 courses
+                            </label>
+                            <label class="flex items-center justify-center p-2 border border-gray-300 rounded-md cursor-pointer hover:bg-blue-50 text-xs">
+                                <input type="radio" name="course-count" value="10" checked class="mr-1">
+                                10 courses
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <button type="submit" class="btn-primary w-full text-white font-semibold py-2 px-4 rounded-lg text-sm">
+                        🎯 Get Smart Recommendations
+                    </button>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Right Panel - Recommendations -->
+        <div class="w-1/2 bg-white rounded-lg shadow-lg overflow-y-auto">
+            <div class="p-4">
+                <div id="welcome-message" class="text-center py-16">
+                    <div class="text-6xl mb-4">🎓</div>
+                    <h3 class="text-xl font-semibold text-gray-800 mb-2">Ready to discover your perfect electives?</h3>
+                    <p class="text-gray-600">Fill out your preferences on the left to get personalized course recommendations powered by AI.</p>
+                </div>
+                
+                <!-- Recommendations Display -->
+                <div id="recommendations-section" style="display: none;">
+                    <div class="mb-4">
+                        <h3 class="text-lg font-semibold text-gray-800 flex items-center mb-2">
+                            ⭐ Your Recommended Electives
+                        </h3>
+                        <div id="courses-found-badge" class="inline-block bg-blue-500 text-white px-2 py-1 rounded-full text-xs font-medium">
+                            Loading courses...
+                        </div>
+                    </div>
+                    <div id="recommendations-content"></div>
+                    
+                    <!-- New Recommendation Button -->
+                    <button id="new-recommendation-btn" 
+                            class="mt-4 bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-3 rounded-lg transition-colors text-sm">
+                        📝 Get New Recommendations
+                    </button>
+                </div>            <!-- Chat Interface -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Chat Bubble -->
+    <div id="chat-bubble" class="fixed bottom-6 right-6 z-50">
+        <!-- Chat Toggle Button -->
+        <button id="chat-toggle" class="bg-blue-600 hover:bg-blue-700 text-white rounded-full w-14 h-14 flex items-center justify-center shadow-lg transition-all duration-300 hover:scale-110">
+            <span id="chat-icon" class="text-xl">💬</span>
+        </button>
+        
+        <!-- Chat Window -->
+        <div id="chat-window" class="hidden absolute bottom-16 right-0 w-80 h-96 bg-white rounded-lg shadow-2xl border border-gray-200 flex flex-col">
+            <!-- Chat Header -->
+            <div class="bg-blue-600 text-white p-3 rounded-t-lg flex items-center justify-between">
+                <div class="flex items-center">
+                    <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center mr-2">
+                        🎓
+                    </div>
+                    <div>
+                        <div class="font-semibold text-sm">AI Course Advisor</div>
+                        <div class="text-xs opacity-90">Online now</div>
+                    </div>
+                </div>
+                <button id="chat-close" class="text-white hover:text-gray-200 text-xl">&times;</button>
+            </div>
+            
+            <!-- Chat Messages -->
+            <div id="chat-history" class="flex-1 p-3 overflow-y-auto space-y-3">
+                <div class="advisor-message message-bubble">
+                    <p class="text-sm">Hello! I'm your AI Course Advisor. Feel free to ask me any questions about courses, academic planning, or requirements. How can I help you today?</p>
+                </div>
+            </div>
+            
+            <!-- Typing Indicator -->
+            <div id="typing-indicator" class="typing-indicator px-3">
+                <span class="text-sm">Advisor is typing</span>
+                <div class="flex ml-2">
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                </div>
+            </div>
+            
+            <!-- Chat Input -->
+            <div class="p-3 border-t border-gray-200">
+                <div class="flex items-center space-x-2">
+                    <input type="text" id="chat-input" 
+                           class="flex-1 p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                           placeholder="Type your message...">
+                    <button id="send-chat-btn" 
+                            class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg transition-colors">
+                        <span class="text-sm">📤</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // DOM elements
+        const profileForm = document.getElementById('profile-form');
+        const recommendationsSection = document.getElementById('recommendations-section');
+        const recommendationsContent = document.getElementById('recommendations-content');
+        const newRecommendationBtn = document.getElementById('new-recommendation-btn');
+        const chatHistory = document.getElementById('chat-history');
+        const chatInput = document.getElementById('chat-input');
+        const sendChatBtn = document.getElementById('send-chat-btn');
+        const typingIndicator = document.getElementById('typing-indicator');
+        const chatToggle = document.getElementById('chat-toggle');
+        const chatWindow = document.getElementById('chat-window');
+        const chatClose = document.getElementById('chat-close');
+        const chatIcon = document.getElementById('chat-icon');
+
+        // Handle form submission for recommendations
+        profileForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            addSidebarDebugMessage("User submitted recommendation form", 'info');
+            
+            // Get selected interests
+            const selectedInterests = Array.from(document.querySelectorAll('input[name="interests"]:checked'))
+                .map(cb => cb.value);
+            
+            addSidebarDebugMessage("Selected interests: " + selectedInterests.join(', '), 'info');
+            
+            // Get course count
+            const courseCount = document.querySelector('input[name="course-count"]:checked')?.value || '10';
+            
+            const formData = {
+                education_level: document.getElementById('education-level').value,
+                interests: selectedInterests,
+                career_goal: document.getElementById('career-goal').value,
+                explore_new: document.getElementById('explore-new').checked,
+                course_count: parseInt(courseCount)
+            };
+
+            // Validate required fields
+            if (!formData.education_level) {
+                alert('Please select your education level');
+                return;
+            }
+
+            if (selectedInterests.length === 0 && !formData.explore_new) {
+                alert('Please select at least one interest or check "Explore new fields"');
+                return;
+            }
+
+            try {
+                await showProgressiveLoading(formData);
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Failed to get recommendations. Please try again.');
+                hideLoading();
+            }
+        });
+
+        // Handle new recommendation button
+        newRecommendationBtn.addEventListener('click', () => {
+            // Show welcome message and hide recommendations in right panel
+            document.getElementById('welcome-message').style.display = 'block';
+            recommendationsSection.style.display = 'none';
+            profileForm.reset();
+        });
+
+        // Handle chat functionality
+        async function sendChatMessage() {
+            const message = chatInput.value.trim();
+            if (!message) return;
+
+            addSidebarDebugMessage("User sent chat message: " + message.substring(0, 50) + (message.length > 50 ? "..." : ""), 'info');
+
+            // Add user message to chat
+            addMessageToChat('user', message);
+            chatInput.value = '';
+
+            // Show typing indicator
+            showTyping();
+
+            try {
+                addSidebarDebugMessage("Sending chat request to /api/chat endpoint", 'api');
+                
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ message: message })
+                });
+
+                addSidebarDebugMessage("Chat API response received: " + response.status, 'success');
+                
+                const data = await response.json();
+
+                if (data.success) {
+                    addSidebarDebugMessage("Chat response generated successfully", 'success');
+                    addMessageToChat('advisor', data.response);
+                } else {
+                    addSidebarDebugMessage("Chat API returned error", 'error');
+                    addMessageToChat('advisor', 'Sorry, I encountered an error. Please try again.');
+                }
+            } catch (error) {
+                console.error('Chat error:', error);
+                addSidebarDebugMessage("Chat error: " + error.message, 'error');
+                addMessageToChat('advisor', 'Sorry, I\'m having trouble responding right now. Please try again.');
+            } finally {
+                hideTyping();
+            }
+        }
+
+        // Chat bubble functionality
+        chatToggle.addEventListener('click', () => {
+            if (chatWindow.classList.contains('hidden')) {
+                chatWindow.classList.remove('hidden');
+                chatIcon.textContent = '✕';
+                hideChatNotification();
+                addSidebarDebugMessage("Chat window opened by user", 'info');
+            } else {
+                chatWindow.classList.add('hidden');
+                chatIcon.textContent = '💬';
+                addSidebarDebugMessage("Chat window closed by user", 'info');
+            }
+        });
+
+        chatClose.addEventListener('click', () => {
+            chatWindow.classList.add('hidden');
+            chatIcon.textContent = '💬';
+            addSidebarDebugMessage("Chat window closed via close button", 'info');
+        });
+
+        // Chat event listeners
+        sendChatBtn.addEventListener('click', sendChatMessage);
+        chatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendChatMessage();
+            }
+        });
+
+        // Progressive loading with steps
+        async function showProgressiveLoading(formData) {
+            const steps = [
+                { id: 1, text: "Analyzing your profile...", delay: 1000 },
+                { id: 2, text: "Calling recommendation API...", delay: 800 },
+                { id: 3, text: "Searching course catalog...", delay: 1200 },
+                { id: 4, text: "Matching courses to your interests...", delay: 1000 },
+                { id: 5, text: "Preparing prompt for AI analysis...", delay: 800 },
+                { id: 6, text: "Getting Gemini AI response...", delay: 2000 },
+                { id: 7, text: "Processing course recommendations...", delay: 600 }
+            ];
+
+            showLoadingWithSteps(steps);
+            
+            // Add initial debug messages to sidebar
+            addSidebarDebugMessage("🎯 Processing user interests: " + JSON.stringify(formData.interests), 'process');
+            addSidebarDebugMessage("📊 User Profile - Academic Level: " + formData.education_level + ", Course Count: " + formData.course_count, 'info');
+            
+            let currentStep = 0;
+            
+            // Simulate progress through steps
+            for (let step of steps) {
+                await new Promise(resolve => setTimeout(resolve, step.delay));
+                updateLoadingStep(step.id, 'completed');
+                currentStep++;
+                
+                // Add step-specific debug messages
+                if (step.id === 1) {
+                    addSidebarDebugMessage("Profile Analysis: Expanding interest keywords for search optimization", 'process');
+                }
+                
+                // Make actual API call at step 2
+                if (step.id === 2) {
+                    addSidebarDebugMessage("API Call: Sending POST request to /api/recommend endpoint", 'api');
+                    addSidebarDebugMessage("Request payload: " + JSON.stringify(formData).substring(0, 100) + "...", 'info');
+                    
+                    try {
+                        const response = await fetch('/api/recommend', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify(formData)
+                        });
+
+                        addSidebarDebugMessage("Response Status: " + response.status + " " + response.statusText, 'success');
+                        
+                        const data = await response.json();
+                        
+                        if (data.success) {
+                            addSidebarDebugMessage("Courses Found: " + data.courses.length + " matching courses retrieved", 'success');
+                            
+                            // Add debug information from server
+                            if (data.debug_info) {
+                                addSidebarDebugMessage("Server processed " + data.debug_info.interests_received.length + " interests", 'info');
+                                addSidebarDebugMessage("Search matched " + data.debug_info.courses_found_total + " total courses", 'info');
+                                addSidebarDebugMessage("Academic Level: " + data.debug_info.academic_level, 'info');
+                            }
+                            
+                            // Continue with remaining steps, then show results
+                            setTimeout(() => {
+                                addSidebarDebugMessage("Course recommendations ready for display!", 'success');
+                                hideLoading();
+                                displayCourseCards(data);
+                                // Hide welcome message and show recommendations in right panel
+                                document.getElementById('welcome-message').style.display = 'none';
+                                recommendationsSection.style.display = 'block';
+                            }, (steps.length - currentStep) * 600);
+                        } else {
+                            throw new Error(data.error || 'Failed to get recommendations');
+                        }
+                    } catch (error) {
+                        addSidebarDebugMessage("Error: " + error.message, 'error');
+                        hideLoading();
+                        throw error;
+                    }
+                } else if (step.id === 3) {
+                    addSidebarDebugMessage("Catalog Search: Using RAG system to find relevant courses from 80+ course database", 'process');
+                } else if (step.id === 4) {
+                    addSidebarDebugMessage("Interest Matching: Scoring courses based on keyword relevance and academic level", 'process');
+                } else if (step.id === 5) {
+                    addSidebarDebugMessage("AI Prompt: Creating structured prompt for Gemini AI analysis with course data", 'process');
+                } else if (step.id === 6) {
+                    addSidebarDebugMessage("Gemini AI: Processing natural language recommendations using Google's LLM", 'api');
+                } else if (step.id === 7) {
+                    addSidebarDebugMessage("Processing: Formatting AI response into structured course cards", 'process');
+                }
+            }
+        }
+
+        // Helper functions
+        function displayCourseCards(data) {
+            const courses = data.courses || [];
+            const profileSummary = data.profile_summary;
+            
+            // Update badge with course count
+            document.getElementById('courses-found-badge').textContent = `${courses.length} courses found`;
+            document.getElementById('courses-found-badge').className = 'inline-block bg-blue-500 text-white px-2 py-1 rounded-full text-xs font-medium';
+
+            let html = '';
+
+            // Profile summary - more compact
+            if (profileSummary) {
+                html += `
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+                        <h4 class="font-medium text-blue-800 mb-1 text-sm">📝 Your Profile Summary:</h4>
+                        <p class="text-blue-700 text-xs whitespace-pre-line">${profileSummary}</p>
+                    </div>
+                `;
+            }
+
+            // Course cards
+            if (courses.length > 0) {
+                courses.forEach((course, index) => {
+                    html += createCourseCard(course, index + 1);
+                });
+            } else {
+                html += `
+                    <div class="course-card text-center">
+                        <h3 class="text-xl font-semibold mb-2">No courses found</h3>
+                        <p class="text-gray-600">Try adjusting your preferences or selecting different interests.</p>
+                    </div>
+                `;
+            }
+
+            recommendationsContent.innerHTML = html;
+        }
+
+        function createCourseCard(course, index) {
+            const getMatchPercentages = () => {
+                // Simulate match percentages based on course relevance
+                const interest = Math.floor(Math.random() * 30) + 50; // 50-80%
+                const topics = Math.floor(Math.random() * 30) + 40;   // 40-70%
+                const career = Math.floor(Math.random() * 25) + 45;   // 45-70%
+                return { interest, topics, career };
+            };
+
+            const { interest, topics, career } = getMatchPercentages();
+
+            return `
+                <div class="bg-white border border-gray-200 rounded-lg p-3 mb-3 shadow-sm hover:shadow-md transition-shadow">
+                    <div class="flex justify-between items-start mb-2">
+                        <div class="flex items-center">
+                            <span class="bg-blue-500 text-white px-2 py-1 rounded text-xs font-bold mr-2">
+                                ${course.id || `COURSE${index}`}
+                            </span>
+                            <h4 class="text-sm font-semibold text-gray-800">
+                                ${course.title || 'Course Title'}
+                            </h4>
+                        </div>
+                        <button class="text-gray-400 hover:text-blue-500 transition-colors text-xs" onclick="saveCourse('${course.id}')">
+                            💾
+                        </button>
+                    </div>
+                    
+                    <p class="text-gray-600 mb-2 text-xs leading-relaxed">
+                        ${course.description ? course.description.substring(0, 150) + (course.description.length > 150 ? '...' : '') : 'Course description not available'}
+                    </p>
+                    
+                    <div class="grid grid-cols-2 gap-2 mb-2 text-xs">
+                        <div>
+                            <span class="font-medium">Credits:</span> ${course.credits || 'N/A'}
+                        </div>
+                        <div>
+                            <span class="font-medium">Level:</span> ${course.level || 'N/A'}
+                        </div>
+                        <div>
+                            <span class="font-medium">Prerequisites:</span> ${course.prerequisites || 'None'}
+                        </div>
+                        <div>
+                            <span class="font-medium">Offered:</span> ${course.semesters ? course.semesters.join('/') : 'N/A'}
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-2 mb-2">
+                        <div class="text-center">
+                            <div class="text-xs text-gray-600">Interest</div>
+                            <div class="font-bold text-sm">${interest}%</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-xs text-gray-600">Topics</div>
+                            <div class="font-bold text-sm">${topics}%</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-xs text-gray-600">Career</div>
+                            <div class="font-bold text-sm">${career}%</div>
+                        </div>
+                    </div>
+
+                    ${course.keywords && course.keywords.length > 0 ? `
+                        <div class="flex flex-wrap gap-1">
+                            ${course.keywords.slice(0, 3).map(keyword => 
+                                `<span class="bg-gray-100 text-gray-700 px-1 py-0.5 rounded text-xs">${keyword}</span>`
+                            ).join('')}
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        }
+
+        function formatRecommendationsText(text) {
+            // Convert markdown-like formatting to HTML
+            return text
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                .replace(/\n\n/g, '</p><p>')
+                .replace(/\n/g, '<br>')
+                .replace(/^/, '<p>')
+                .replace(/$/, '</p>')
+                .replace(/(<p><br>|<br><\/p>)/g, '</p><p>');
+        }
+
+        // Remove old displayRecommendations function and replace with displayCourseCards
+
+        function addMessageToChat(sender, message) {
+            const messageElement = document.createElement('div');
+            messageElement.classList.add('message-bubble', sender === 'user' ? 'user-message' : 'advisor-message');
+            
+            if (sender === 'advisor') {
+                messageElement.innerHTML = formatRecommendationsText(message);
+            } else {
+                messageElement.textContent = message;
+            }
+            
+            chatHistory.appendChild(messageElement);
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+            
+            // Show notification if chat window is closed and message is from advisor
+            if (sender === 'advisor' && chatWindow.classList.contains('hidden')) {
+                showChatNotification();
+            }
+        }
+        
+        function showChatNotification() {
+            let notification = document.getElementById('chat-notification');
+            if (!notification) {
+                notification = document.createElement('div');
+                notification.id = 'chat-notification';
+                notification.className = 'chat-notification';
+                notification.textContent = '1';
+                chatToggle.appendChild(notification);
+            }
+        }
+        
+        function hideChatNotification() {
+            const notification = document.getElementById('chat-notification');
+            if (notification) {
+                notification.remove();
+            }
+        }
+
+        function showTyping() {
+            typingIndicator.style.display = 'flex';
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+        }
+
+        function hideTyping() {
+            typingIndicator.style.display = 'none';
+        }
+
+        function showLoadingWithSteps(steps) {
+            const loadingDiv = document.createElement('div');
+            loadingDiv.id = 'loading-indicator';
+            loadingDiv.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+            
+            let stepsHtml = steps.map(step => `
+                <div class="progress-step" id="step-${step.id}">
+                    <div class="step-icon step-waiting" id="step-icon-${step.id}">
+                        ${step.id}
+                    </div>
+                    <div class="step-text">
+                        ${step.text}
+                    </div>
+                </div>
+            `).join('');
+            
+            loadingDiv.innerHTML = `
+                <div class="bg-white p-8 rounded-xl shadow-2xl max-w-md w-full mx-4">
+                    <div class="text-center mb-6">
+                        <div class="animate-spin rounded-full h-12 w-12 border-b-3 border-blue-600 mx-auto mb-4"></div>
+                        <h3 class="text-xl font-semibold text-gray-800">Getting Your Course Recommendations</h3>
+                        <p class="text-gray-600 text-sm mt-2">Please wait while we analyze your preferences...</p>
+                    </div>
+                    <div class="space-y-2">
+                        ${stepsHtml}
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(loadingDiv);
+            
+            // Activate first step
+            updateLoadingStep(1, 'active');
+        }
+
+        function updateLoadingStep(stepId, status) {
+            const step = document.getElementById(`step-${stepId}`);
+            const icon = document.getElementById(`step-icon-${stepId}`);
+            
+            if (step && icon) {
+                // Remove all status classes
+                step.classList.remove('active', 'completed');
+                icon.classList.remove('step-waiting', 'step-active', 'step-completed');
+                
+                if (status === 'active') {
+                    step.classList.add('active');
+                    icon.classList.add('step-active');
+                } else if (status === 'completed') {
+                    step.classList.add('completed');
+                    icon.classList.add('step-completed');
+                    icon.innerHTML = '✓';
+                    
+                    // Activate next step
+                    const nextStep = document.getElementById(`step-${stepId + 1}`);
+                    const nextIcon = document.getElementById(`step-icon-${stepId + 1}`);
+                    if (nextStep && nextIcon) {
+                        nextStep.classList.add('active');
+                        nextIcon.classList.remove('step-waiting');
+                        nextIcon.classList.add('step-active');
+                    }
+                }
+            }
+        }
+
+        function hideLoading() {
+            const loadingDiv = document.getElementById('loading-indicator');
+            if (loadingDiv) {
+                loadingDiv.remove();
+            }
+        }
+        
+        // Sidebar Debug Functions
+        function toggleDebugSidebar() {
+            const sidebar = document.getElementById('debugSidebar');
+            const button = document.getElementById('toggleDebug');
+            
+            if (sidebar.classList.contains('hidden')) {
+                sidebar.classList.remove('hidden');
+                button.textContent = '🔧 Hide Debug';
+                addSidebarDebugMessage('📱 Debug panel opened by user', 'info');
+            } else {
+                sidebar.classList.add('hidden');
+                button.textContent = '🔧 Show Debug';
+            }
+        }
+        
+        function addSidebarDebugMessage(message, type = 'info') {
+            const debugLog = document.getElementById('debugLog');
+            if (debugLog) {
+                const timestamp = new Date().toLocaleTimeString();
+                const messageDiv = document.createElement('div');
+                
+                let iconColor = 'text-blue-400';
+                let icon = '📝';
+                
+                if (type === 'success') {
+                    iconColor = 'text-green-400';
+                    icon = '✅';
+                } else if (type === 'error') {
+                    iconColor = 'text-red-400';
+                    icon = '❌';
+                } else if (type === 'warning') {
+                    iconColor = 'text-yellow-400';
+                    icon = '⚠️';
+                } else if (type === 'api') {
+                    iconColor = 'text-purple-400';
+                    icon = '🌐';
+                } else if (type === 'process') {
+                    iconColor = 'text-cyan-400';
+                    icon = '⚙️';
+                }
+                
+                messageDiv.className = 'text-xs border-l-2 border-gray-600 pl-3 py-1';
+                messageDiv.innerHTML = `
+                    <div class="flex items-start space-x-2">
+                        <span class="${iconColor}">${icon}</span>
+                        <div class="flex-1">
+                            <span class="text-gray-400">[${timestamp}]</span>
+                            <div class="text-gray-200 mt-1">${message}</div>
+                        </div>
+                    </div>
+                `;
+                
+                debugLog.appendChild(messageDiv);
+                debugLog.scrollTop = debugLog.scrollHeight;
+            }
+        }
+        
+        function clearDebugLog() {
+            const debugLog = document.getElementById('debugLog');
+            if (debugLog) {
+                debugLog.innerHTML = '<div class="text-gray-400">🚀 System initialized. Debug log cleared.</div>';
+            }
+        }
+
+        function saveCourse(courseId) {
+            // Placeholder for save course functionality
+            alert(`Course ${courseId} saved! (Feature coming soon)`);
+        }
+
+        // Auto-focus on chat input
+        chatInput.focus();
+        
+        // Sidebar event listeners
+        document.getElementById('toggleDebug').addEventListener('click', toggleDebugSidebar);
+        document.getElementById('closeSidebar').addEventListener('click', toggleDebugSidebar);
+        document.getElementById('clearDebugLog').addEventListener('click', clearDebugLog);
+        
+        // Add initial debug message
+        addSidebarDebugMessage("Course Advisor system initialized successfully", 'success');
+    </script>
+</body>
+</html>
