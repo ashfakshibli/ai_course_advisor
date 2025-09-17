@@ -69,20 +69,31 @@ class AICourseAdvisor:
             return "I'm sorry, the course advisor system is not available right now."
         
         try:
-            # Get course recommendations from RAG system
-            recommended_courses = self.rag_system.get_recommended_courses(user_profile)
+            # Get relevant courses
+            course_context = self.rag_system.get_relevant_courses_context(user_profile)
             
-            if not recommended_courses:
-                return self._handle_no_courses_found(user_profile)
-            
-            # Format course context for LLM
-            course_context = self.rag_system.get_context_for_llm(recommended_courses)
-            
-            # Create detailed prompt for Gemini
+            # Create recommendation prompt
             prompt = self._create_recommendation_prompt(user_profile, course_context)
             
-            # Generate response
-            response = self.chat.send_message(prompt)
+            print(f"\n{'='*60}")
+            print("DEBUG: FULL PROMPT SENT TO GEMINI:")
+            print(f"{'='*60}")
+            print(prompt)
+            print(f"{'='*60}")
+            
+            # Generate recommendation using Gemini
+            response = self.model.generate_content(prompt)
+            
+            print(f"\n{'='*60}")
+            print("DEBUG: RAW GEMINI RESPONSE:")
+            print(f"{'='*60}")
+            print(repr(response.text))  # Use repr to see exact characters
+            print(f"{'='*60}")
+            print("DEBUG: FORMATTED GEMINI RESPONSE:")
+            print(f"{'='*60}")
+            print(response.text)
+            print(f"{'='*60}")
+            
             return response.text
             
         except Exception as e:
@@ -91,7 +102,10 @@ class AICourseAdvisor:
     
     def _format_education_level(self, education_level: str) -> str:
         """Format education level for proper display."""
+        print(f"DEBUG: _format_education_level called with: '{education_level}' (type: {type(education_level)})")
+        
         if not education_level or education_level == 'Not specified':
+            print("DEBUG: Returning 'Not specified'")
             return 'Not specified'
         
         # Mapping for proper display format
@@ -103,7 +117,18 @@ class AICourseAdvisor:
             'graduate': 'Graduate Student'
         }
         
-        return level_mappings.get(education_level.lower(), education_level.title())
+        lower_level = education_level.lower()
+        print(f"DEBUG: Lowercased input: '{lower_level}'")
+        print(f"DEBUG: Available mappings: {list(level_mappings.keys())}")
+        
+        if lower_level in level_mappings:
+            result = level_mappings[lower_level]
+            print(f"DEBUG: Found mapping: '{lower_level}' -> '{result}'")
+            return result
+        else:
+            result = education_level.title()
+            print(f"DEBUG: No mapping found, using title case: '{education_level}' -> '{result}'")
+            return result
     
     def _create_recommendation_prompt(self, user_profile: Dict[str, Any], course_context: str) -> str:
         """Create a detailed prompt for course recommendations."""
