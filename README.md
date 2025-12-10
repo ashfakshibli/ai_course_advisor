@@ -72,10 +72,10 @@ pip install -r requirements.txt
 
 ### Step 4: Verify Environment Variables
 
-The `.env` file should already be configured with your Gemini API key:
+The `.env` file should be configured with your Gemini API key:
 
 ```
-GEMINI_API_KEY=REDACTED_GOOGLE_API_KEY
+GEMINI_API_KEY=""
 FLASK_ENV=development
 PORT=5000
 ```
